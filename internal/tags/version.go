@@ -17,6 +17,9 @@ var ErrSchemaOutdated = fmt.Errorf("outdated schema")
 // usually appear in empty database
 var ErrInvalidVersion = fmt.Errorf("invalid user_version")
 
+// Error when try to pass nil value to *sql.DB
+var ErrNilDatabase = fmt.Errorf("nil value of *sql.DB")
+
 // Latest Version of schema supported.
 //
 // Every database schema changes,
@@ -24,13 +27,18 @@ var ErrInvalidVersion = fmt.Errorf("invalid user_version")
 const LatestSchema = 1
 
 // Check database user version value is supported by program.
+// The *sql.DB MUST be opened before passed to this function.
 //
 // Any mismatched values will consider as outdated,
 // and should run migration scripts before program actually function.
 func checkVer(db *sql.DB) error {
+	if db == nil {
+		return ErrNilDatabase
+	}
+
 	row := db.QueryRow("PRAGMA user_version")
 	if row == nil {
-		return ErrInvalidVersion
+		return fmt.Errorf("nil row query")
 	}
 
 	var userVersion int
