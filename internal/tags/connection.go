@@ -46,6 +46,9 @@ func (l *LocalTags) connectTo(path string) error {
 		return err
 	}
 
+	// Test DB connection by user version
+	checkVer(db)
+
 	// Assign to local database
 	l.db = db
 	return nil
