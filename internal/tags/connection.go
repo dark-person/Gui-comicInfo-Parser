@@ -41,16 +41,18 @@ func (l *LocalTags) connectTo(path string) error {
 	}
 
 	// Open Database connection
-	db, err := sql.Open(constant.DatabaseType, path)
+	var err error
+	l.db, err = sql.Open(constant.DatabaseType, path)
 	if err != nil {
 		return err
 	}
 
 	// Test DB connection by user version
-	checkVer(db)
+	err = checkVer(l.db)
+	if err != nil {
+		return err
+	}
 
-	// Assign to local database
-	l.db = db
 	return nil
 }
 

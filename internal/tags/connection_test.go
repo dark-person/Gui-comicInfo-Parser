@@ -1,12 +1,16 @@
 package tags
 
 import (
+	"database/sql"
+	"fmt"
+	"gui-comicinfo/internal/constant"
 	"os"
 	"path/filepath"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 // Prepare testing. This function should be called in 1st line of every test.
@@ -20,28 +24,50 @@ func TestLocalTags_connectTo(t *testing.T) {
 	prepareTest()
 
 	// Prepare dummy folder
-	dir := "testing"
-	os.MkdirAll(dir, 0755)
+	dir := t.TempDir()
 
 	// Case 1: Connect to existed database (Graceful)
 	path1 := filepath.Join(dir, "case1.db")
 	f1, _ := os.Create(path1)
-	defer f1.Close()
+	f1.Close()
+
+	db, _ := sql.Open(constant.DatabaseType, path1)
+	_, e := db.Exec(fmt.Sprintf("PRAGMA user_version = %d", LatestSchema))
+	if e != nil {
+		logrus.Error(e)
+	}
+	db.Close()
 
 	// Case 2: Connect to database that is not existing
 	path2 := filepath.Join(dir, "case2.db")
 
-	// Temp LocalTags struct
-	lt := &LocalTags{}
+	// Case 3: Connect to existed invalid database
+	path3 := filepath.Join(dir, "case3.db")
+	f3, _ := os.Create(path3)
+	defer f3.Close()
 
-	// Start Test
-	err1 := lt.connectTo(path1)
-	if err1 != nil {
-		t.Errorf("%s LocalTags.connectTo() error = %v, wantErr %v", "Case 1", err1, nil)
+	// Test Case structure
+	type testCase struct {
+		path    string
+		wantErr bool
 	}
 
-	err2 := lt.connectTo(path2)
-	if err2 == nil || !os.IsNotExist(err2) {
-		t.Errorf("%s LocalTags.connectTo() error = %v, expect error is not exist.", "Case 2", err2)
+	// Prepare tests
+	tests := []testCase{
+		{path1, false},
+		{path2, true},
+		{path3, true},
+	}
+
+	// Start Test
+	for idx, tt := range tests {
+		lt := &LocalTags{}
+		err := lt.connectTo(tt.path)
+
+		if lt.db != nil {
+			lt.db.Close()
+		}
+
+		assert.EqualValuesf(t, tt.wantErr, err != nil, "Case %d: Error expected %v, got %v", idx, tt.wantErr, err)
 	}
 }
