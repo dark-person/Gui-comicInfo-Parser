@@ -2,15 +2,20 @@ package tags
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
 	"gui-comicinfo/internal/constant"
 	"gui-comicinfo/internal/files"
 	"os"
 	"path/filepath"
+	"sort"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/sirupsen/logrus"
 )
+
+//go:embed sql/*.sql
+var sqlScript embed.FS
 
 type LocalTags struct {
 	db *sql.DB
@@ -83,14 +88,43 @@ func createDb(path string) error {
 		return fmt.Errorf("invalid database path")
 	}
 
-	file, err := os.Create(path)
+	// Prevent already existing database
+	if files.IsFileExist(path) {
+		return fmt.Errorf("database already exists")
+	}
+
+	// Create Connection, which will create file if not exist
+	db, err := sql.Open(constant.DatabaseType, path)
 	if err != nil {
 		return err
 	}
 
-	// Close immediately
-	file.Close()
+	// Get all sql files in embedded file system
+	files, err := sqlScript.ReadDir("sql")
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].Name() < files[j].Name()
+	})
 
-	// TODO: Add table
+	// Run all script available
+	for _, file := range files {
+		// Not using filepath.Join as embedded file system not support window slashes
+		path := "sql/" + file.Name()
+
+		// Get SQL file content as string
+		str, err := sqlScript.ReadFile(path)
+		if err != nil {
+			db.Close()
+			return err
+		}
+
+		_, err = db.Exec(string(str))
+		if err != nil {
+			db.Close()
+			return err
+		}
+	}
+
+	// Close Database connection
+	db.Close()
 	return err
 }

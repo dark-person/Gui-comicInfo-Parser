@@ -71,3 +71,29 @@ func TestLocalTags_connectTo(t *testing.T) {
 		assert.EqualValuesf(t, tt.wantErr, err != nil, "Case %d: Error expected %v, got %v", idx, tt.wantErr, err)
 	}
 }
+
+func Test_createDb(t *testing.T) {
+
+	err := createDb("temp/abc.db")
+	if err != nil {
+		logrus.Error(err)
+	}
+
+	// type args struct {
+	// 	path string
+	// }
+	// tests := []struct {
+	// 	name    string
+	// 	args    args
+	// 	wantErr bool
+	// }{
+	// 	// TODO: Add test cases.
+	// }
+	// for _, tt := range tests {
+	// 	t.Run(tt.name, func(t *testing.T) {
+	// 		if err := createDb(tt.args.path); (err != nil) != tt.wantErr {
+	// 			t.Errorf("createDb() error = %v, wantErr %v", err, tt.wantErr)
+	// 		}
+	// 	})
+	// }
+}
